@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Visual RSS Builder</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            max-width: 1100px;
+            margin: 20px auto;
+            background: #f4f6f9;
+            padding: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-primary { background: #ff6600; color: white; }
+        .btn-green { background: #28a745; color: white; }
+        .btn-grey { background: #6c757d; color: white; }
+
+        .btn:hover { opacity: 0.9; }
+
+        #resultArea {
+            display: none;
+            margin-top: 25px;
+            padding: 20px;
+            background: #e8f5e9;
+            border-radius: 10px;
+            border: 2px solid #28a745;
+        }
+
+        iframe {
+            width: 100%;
+            height: 600px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+            border: 2px solid #ddd;
+        }
+
+        .loader {
+            display: none;
+            color: #ff6600;
+            font-weight: bold;
+        }
+
+        .error {
+            color: red;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+<div class="card">
+
+    <h2>Visual RSS Builder</h2>
+
+    <label>Target Website URL</label>
+    <div style="display:flex; gap:10px;">
+        <input type="url" id="urlInput" placeholder="https://techcrunch.com">
+        <button class="btn btn-green" onclick="loadPreview()">Load Preview</button>
+    </div>
+
+    <label>Item Container Selector</label>
+    <input type="text" id="item_css" readonly>
+
+    <label>Title Element Selector</label>
+    <input type="text" id="title_css" readonly>
+
+    <div style="display:flex; gap:10px; margin-top:10px;">
+        <button class="btn btn-grey" onclick="resetAll()">Reset</button>
+        <button class="btn btn-primary" onclick="generateLink()">Generate RSS Link</button>
+    </div>
+
+    <div class="loader" id="loader">Generating feed...</div>
+    <div class="error" id="errorBox"></div>
+
+    <div id="resultArea">
+        <strong>RSS Feed URL:</strong>
+        <div style="display:flex; gap:10px;">
+            <input type="text" id="finalRssUrl" readonly>
+            <button class="btn btn-green" onclick="copyToClipboard()">Copy</button>
+        </div>
+    </div>
+
+    <iframe id="preview"></iframe>
+
+</div>
+
+<script>
+let currentStep = 1;
+
+function loadPreview() {
+    const url = document.getElementById('urlInput').value;
+    if (!url) return showError("Please enter a URL.");
+
+    const frame = document.getElementById('preview');
+    frame.style.display = 'block';
+    frame.src = '/preview?url=' + encodeURIComponent(url);
+    resetSelectors();
+}
+
+function resetSelectors() {
+    currentStep = 1;
+    document.getElementById('item_css').value = "";
+    document.getElementById('title_css').value = "";
+    document.getElementById('resultArea').style.display = "none";
+    clearError();
+}
+
+function resetAll() {
+    resetSelectors();
+    document.getElementById('preview').style.display = "none";
+}
+
+window.addEventListener('message', function(e) {
+    if (!e.data || e.data.type !== 'SELECTOR') return;
+
+    if (currentStep === 1) {
+        document.getElementById('item_css').value = e.data.value;
+        currentStep = 2;
+    } else if (currentStep === 2) {
+        document.getElementById('title_css').value = e.data.value;
+        currentStep = 3;
+    }
+});
+
+function generateLink() {
+    const url = document.getElementById('urlInput').value;
+    const item = document.getElementById('item_css').value;
+    const title = document.getElementById('title_css').value;
+
+    if (!url || !item || !title) {
+        return showError("Complete all steps first.");
+    }
+
+    clearError();
+    document.getElementById('loader').style.display = "block";
+
+    const baseUrl = window.location.origin;
+    const link = `${baseUrl}/feed?url=${encodeURIComponent(url)}&item=${encodeURIComponent(item)}&title=${encodeURIComponent(title)}`;
+
+    setTimeout(() => {
+        document.getElementById('loader').style.display = "none";
+        document.getElementById('finalRssUrl').value = link;
+        document.getElementById('resultArea').style.display = "block";
+    }, 600);
+}
+
+async function copyToClipboard() {
+    const text = document.getElementById("finalRssUrl").value;
+    await navigator.clipboard.writeText(text);
+    alert("Copied!");
+}
+
+function showError(msg) {
+    document.getElementById("errorBox").innerText = msg;
+}
+
+function clearError() {
+    document.getElementById("errorBox").innerText = "";
+}
+</script>
+</body>
+</html>
