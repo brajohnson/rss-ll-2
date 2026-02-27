@@ -1,0 +1,6 @@
+flask
+playwright
+beautifulsoup4
+feedgen
+requests
+gunicorn
